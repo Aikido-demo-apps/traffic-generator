@@ -18,7 +18,7 @@ class TrafficGenerator {
     private readonly REQUESTS_PER_MINUTE = 10;
 
     private readonly TARGET_URLS = [
-        'https://sovulnerable.fly.dev/welcome',
+        'https://sovulnerable.fly.dev/public',
         //'http://localhost:3000/public'
     ];
 
