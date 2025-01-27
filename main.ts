@@ -18,7 +18,7 @@ class TrafficGenerator {
     private readonly REQUESTS_PER_MINUTE = 10;
 
     private readonly TARGET_URLS = [
-        'https://sovulnerable-white-mountain-7481.fly.dev/public',
+        'https://zen-demo-nodejs.fly.dev/public',
         //'http://localhost:3000/public'
     ];
 
