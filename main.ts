@@ -19,6 +19,7 @@ class TrafficGenerator {
 
     private readonly TARGET_URLS = [
         'https://zen-demo-nodejs.fly.dev/public',
+        'https://zen-demo-dotnet.fly.dev/',
         //'http://localhost:3000/public'
     ];
 

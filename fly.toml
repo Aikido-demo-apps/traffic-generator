@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for traffic-generator on 2025-01-14T12:07:21+01:00
+# fly.toml app configuration file generated for traffic-generator on 2025-01-27T17:07:35+01:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -9,8 +9,10 @@ primary_region = 'ams'
 [build]
 
 [processes]
-worker = "npm run start"
+  worker = 'npm run start'
 
 [[vm]]
   size = 'shared-cpu-1x'
-  memory = "512M"
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
