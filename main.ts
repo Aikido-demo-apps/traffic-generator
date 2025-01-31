@@ -232,7 +232,8 @@ class TrafficGenerator {
     private generateHeaders(ip: string): Record<string, string> {
         const headers: Record<string, string> = {
             'X-Forwarded-For': ip,
-            'X-Real-IP': ip
+            'X-Real-IP': ip,
+            'X-Forwarded-Proto': 'https',
         };
 
         if (Math.random() < 0.3) { // 30% chance for bot
