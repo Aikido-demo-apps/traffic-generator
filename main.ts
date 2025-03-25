@@ -18,8 +18,9 @@ class TrafficGenerator {
     private readonly REQUESTS_PER_MINUTE = 10;
 
     private readonly TARGET_URLS = [
-        'https://zen-demo-nodejs.fly.dev/public',
+        'https://zen-demo-nodejs.fly.dev/',
         'https://zen-demo-dotnet.fly.dev/',
+        'https://zen-demo-python.fly.dev/',
         //'http://localhost:3000/public'
     ];
 
