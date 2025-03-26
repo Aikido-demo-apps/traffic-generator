@@ -15,7 +15,10 @@ interface IPEntry {
 class TrafficGenerator {
     private readonly IP_POOL_SIZE = 100;
     private readonly ipPool: IPEntry[] = [];
-    private readonly REQUESTS_PER_MINUTE = 10;
+    private readonly BASE_REQUESTS_PER_MINUTE = 10;
+    private readonly MAX_MULTIPLIER = 3; // Peak traffic will be 3x the base
+    private readonly MIN_MULTIPLIER = 0.2; // Minimum traffic will be 20% of the base
+    private requestInterval: NodeJS.Timeout | null = null;
 
     private readonly TARGET_URLS = [
         'https://zen-demo-nodejs.fly.dev/',
@@ -302,21 +305,71 @@ class TrafficGenerator {
         }
     }
 
-    private startTrafficGeneration(): void {
-        const interval = (60 * 1000) / this.REQUESTS_PER_MINUTE;
+    private getCurrentRequestsPerMinute(): number {
+        // Get current hour in 24-hour format (0-23) in local timezone
+        const currentHour = new Date().getHours();
+        
+        // Define traffic pattern: peak during business hours (9am-5pm)
+        // with gradual ramp up and down
+        let multiplier: number;
+        
+        if (currentHour >= 9 && currentHour < 17) {
+            // Business hours: 9am-5pm - peak traffic
+            multiplier = this.MAX_MULTIPLIER;
+        } else if (currentHour >= 6 && currentHour < 9) {
+            // Morning ramp up: 6am-9am
+            multiplier = this.MIN_MULTIPLIER + (currentHour - 6) * ((this.MAX_MULTIPLIER - this.MIN_MULTIPLIER) / 3);
+        } else if (currentHour >= 17 && currentHour < 22) {
+            // Evening ramp down: 5pm-10pm
+            multiplier = this.MAX_MULTIPLIER - (currentHour - 17) * ((this.MAX_MULTIPLIER - this.MIN_MULTIPLIER) / 5);
+        } else {
+            // Night hours: 10pm-6am - minimum traffic
+            multiplier = this.MIN_MULTIPLIER;
+        }
+        
+        return Math.round(this.BASE_REQUESTS_PER_MINUTE * multiplier);
+    }
 
-        console.log(`Starting traffic generator - ${this.REQUESTS_PER_MINUTE} requests per minute`);
+    private startTrafficGeneration(): void {
+        console.log(`Starting traffic generator - Base rate: ${this.BASE_REQUESTS_PER_MINUTE} requests per minute`);
+        console.log(`Traffic will vary between ${Math.round(this.BASE_REQUESTS_PER_MINUTE * this.MIN_MULTIPLIER)} and ${Math.round(this.BASE_REQUESTS_PER_MINUTE * this.MAX_MULTIPLIER)} requests per minute based on time of day`);
         console.log(`Target URLs:`, this.TARGET_URLS);
 
+        // Check traffic rate every minute and adjust
         setInterval(() => {
+            const requestsPerMinute = this.getCurrentRequestsPerMinute();
+            const interval = (60 * 1000) / requestsPerMinute;
+            
+            console.log(`Current traffic rate: ${requestsPerMinute} requests per minute (${new Date().toLocaleTimeString()})`);
+            
+            // Clear existing interval if any
+            if (this.requestInterval) {
+                clearInterval(this.requestInterval);
+            }
+            
+            // Set new interval based on current time
+            this.requestInterval = setInterval(() => {
+                this.makeRequest();
+            }, interval);
+        }, 60000); // Check every minute
+        
+        // Initial setup
+        const initialRequestsPerMinute = this.getCurrentRequestsPerMinute();
+        const initialInterval = (60 * 1000) / initialRequestsPerMinute;
+        
+        console.log(`Initial traffic rate: ${initialRequestsPerMinute} requests per minute`);
+        
+        this.requestInterval = setInterval(() => {
             this.makeRequest();
-        }, interval);
+        }, initialInterval);
     }
 
     public getStats(): any {
         return {
             totalIPs: this.ipPool.length,
             targetUrls: this.TARGET_URLS,
+            currentTrafficRate: this.getCurrentRequestsPerMinute(),
+            timeOfDay: new Date().toLocaleTimeString(),
             byRegion: Object.fromEntries(
                 Object.keys(this.IP_RANGES).map(region => [
                     region,
