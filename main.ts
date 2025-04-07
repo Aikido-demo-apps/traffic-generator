@@ -24,7 +24,8 @@ class TrafficGenerator {
         'https://zen-demo-nodejs.fly.dev/',
         'https://zen-demo-dotnet.fly.dev/',
         'https://zen-demo-python.fly.dev/',
-        //'http://localhost:3000/public'
+        'https://zen-demo-java.fly.dev/',
+        'https://zen-demo-php.fly.dev/',
     ];
 
     private readonly IP_RANGES = {
@@ -256,18 +257,18 @@ class TrafficGenerator {
             ];
             const browser = browsers[Math.floor(Math.random() * browsers.length)];
             headers['User-Agent'] = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ${browser}`;
-            
+
             // Add user ID and matching name headers for non-bot requests
             const userId = Math.floor(10000 + Math.random() * 90000); // Generate random 5-digit user ID
             const names = [
-                'Alice', 'Bob', 'Charlie', 'David', 'Emma', 
+                'Alice', 'Bob', 'Charlie', 'David', 'Emma',
                 'Frank', 'Grace', 'Henry', 'Isabella', 'Jack',
                 'Kate', 'Liam', 'Mia', 'Noah', 'Olivia',
                 'Peter', 'Quinn', 'Ryan', 'Sophia', 'Thomas'
             ];
             const nameIndex = userId % names.length;
             const userName = names[nameIndex];
-            
+
             headers['X-User-ID'] = '' + userId;
             headers['X-User-Name'] = userName;
         }
@@ -322,11 +323,11 @@ class TrafficGenerator {
     private getCurrentRequestsPerMinute(): number {
         // Get current hour in 24-hour format (0-23) in local timezone
         const currentHour = new Date().getHours();
-        
+
         // Define traffic pattern: peak during business hours (9am-5pm)
         // with gradual ramp up and down
         let multiplier: number;
-        
+
         if (currentHour >= 9 && currentHour < 17) {
             // Business hours: 9am-5pm - peak traffic
             multiplier = this.MAX_MULTIPLIER;
@@ -340,7 +341,7 @@ class TrafficGenerator {
             // Night hours: 10pm-6am - minimum traffic
             multiplier = this.MIN_MULTIPLIER;
         }
-        
+
         return Math.round(this.BASE_REQUESTS_PER_MINUTE * multiplier);
     }
 
@@ -353,26 +354,26 @@ class TrafficGenerator {
         setInterval(() => {
             const requestsPerMinute = this.getCurrentRequestsPerMinute();
             const interval = (60 * 1000) / requestsPerMinute;
-            
+
             console.log(`Current traffic rate: ${requestsPerMinute} requests per minute (${new Date().toLocaleTimeString()})`);
-            
+
             // Clear existing interval if any
             if (this.requestInterval) {
                 clearInterval(this.requestInterval);
             }
-            
+
             // Set new interval based on current time
             this.requestInterval = setInterval(() => {
                 this.makeRequest();
             }, interval);
         }, 60000); // Check every minute
-        
+
         // Initial setup
         const initialRequestsPerMinute = this.getCurrentRequestsPerMinute();
         const initialInterval = (60 * 1000) / initialRequestsPerMinute;
-        
+
         console.log(`Initial traffic rate: ${initialRequestsPerMinute} requests per minute`);
-        
+
         this.requestInterval = setInterval(() => {
             this.makeRequest();
         }, initialInterval);
