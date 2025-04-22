@@ -26,6 +26,7 @@ class TrafficGenerator {
         'https://zen-demo-python.fly.dev/',
         'https://zen-demo-java.fly.dev/',
         'https://zen-demo-php.fly.dev/',
+        'http://zen-demo-dotnet-danger.internal/'
     ];
 
     private readonly IP_RANGES = {
