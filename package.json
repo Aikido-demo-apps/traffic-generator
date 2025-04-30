@@ -12,7 +12,8 @@
     "@types/node": "^22.10.6",
     "axios": "^1.7.9",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "universalify": "^2.0.1"
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.7.0"
