@@ -15,7 +15,7 @@ interface IPEntry {
 class TrafficGenerator {
     private readonly IP_POOL_SIZE = 100;
     private readonly ipPool: IPEntry[] = [];
-    private readonly BASE_REQUESTS_PER_MINUTE = 10;
+    private readonly BASE_REQUESTS_PER_MINUTE = 100;
     private readonly MAX_MULTIPLIER = 3; // Peak traffic will be 3x the base
     private readonly MIN_MULTIPLIER = 0.2; // Minimum traffic will be 20% of the base
     private requestInterval: NodeJS.Timeout | null = null;
