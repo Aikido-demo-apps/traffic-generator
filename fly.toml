@@ -15,7 +15,7 @@ primary_region = 'ams'
   size = 'shared-cpu-1x'
   memory = '512mb'
   cpu_kind = 'shared'
-  cpus = 1
+  cpus = 2
 
 [metrics]
   port = 9090
