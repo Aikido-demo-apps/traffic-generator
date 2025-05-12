@@ -11,6 +11,7 @@
   "dependencies": {
     "@types/node": "^22.10.6",
     "axios": "^1.7.9",
+    "prom-client": "^14.2.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },

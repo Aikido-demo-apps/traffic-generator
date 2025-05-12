@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { MetricsService } from './metrics';
+import { MetricsServer } from './server';
 
 interface UserAgent {
     pattern: string;
@@ -19,6 +21,7 @@ class TrafficGenerator {
     private readonly MAX_MULTIPLIER = 3; // Peak traffic will be 3x the base
     private readonly MIN_MULTIPLIER = 0.2; // Minimum traffic will be 20% of the base
     private requestInterval: NodeJS.Timeout | null = null;
+    private metricsService: MetricsService;
 
     private readonly TARGET_URLS = [
         'https://zen-demo-nodejs.fly.dev/',
@@ -204,6 +207,13 @@ class TrafficGenerator {
             throw new Error('At least one target URL must be provided');
         }
 
+        // Initialize metrics service with target URLs
+        this.metricsService = new MetricsService(this.TARGET_URLS);
+
+        // Start metrics server
+        const metricsServer = new MetricsServer(this.metricsService);
+        metricsServer.start();
+
         this.initializeIPPool();
         this.startTrafficGeneration();
     }
@@ -289,19 +299,31 @@ class TrafficGenerator {
             // Make parallel requests to all target URLs
             const requests = this.TARGET_URLS.map(async (url) => {
                 try {
+                    // Increment request counter before making the request
+                    this.metricsService.incrementRequestCounter(url);
+
                     const response = await axios.get(url, {
                         headers,
                     });
+
+                    // Increment response status counter after successful request
+                    this.metricsService.incrementResponseStatusCounter(url, response.status, true);
+
                     return {
                         url,
                         status: response.status,
                         success: true
                     };
                 } catch (error) {
+                    // Increment response status counter after failed request
+                    // @ts-ignore
+                    const status = error.response?.status || 0;
+                    this.metricsService.incrementResponseStatusCounter(url, status, false);
+
                     return {
                         url,
                         // @ts-ignore
-                        status: error.response?.status || 0,
+                        status: status,
                         success: false,
                         // @ts-ignore
                         error: error.message
