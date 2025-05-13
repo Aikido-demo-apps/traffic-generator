@@ -2,35 +2,28 @@ import { Counter, Registry } from 'prom-client';
 
 export class MetricsService {
     private readonly registry: Registry;
-    private readonly requestCounters: Map<string, Counter<string>>;
-    private readonly responseStatusCounters: Map<string, Counter<string>>;
+    private readonly requestCounter: Counter<string>;
+    private readonly responseStatusCounter: Counter<string>;
+    private readonly targetUrls: string[];
 
     constructor(targetUrls: string[]) {
         this.registry = new Registry();
-        this.requestCounters = new Map();
-        this.responseStatusCounters = new Map();
+        this.targetUrls = targetUrls;
 
-        // Create counters for each target URL
-        targetUrls.forEach(url => {
-            const urlKey = this.normalizeUrlForMetrics(url);
-            
-            // Request counter per URL
-            const requestCounter = new Counter({
-                name: `traffic_generator_requests_total_${urlKey}`,
-                help: `Total number of requests made to ${url}`,
-                labelNames: ['target_url'] as const,
-                registers: [this.registry]
-            });
-            this.requestCounters.set(url, requestCounter);
+        // Create a single request counter with URL as a label
+        this.requestCounter = new Counter({
+            name: 'traffic_generator_requests_total',
+            help: 'Total number of requests made to target URLs',
+            labelNames: ['target_url', 'url_key'] as const,
+            registers: [this.registry]
+        });
 
-            // Response status counter per URL
-            const responseStatusCounter = new Counter({
-                name: `traffic_generator_responses_${urlKey}`,
-                help: `Response status codes for ${url}`,
-                labelNames: ['target_url', 'status', 'success'] as const,
-                registers: [this.registry]
-            });
-            this.responseStatusCounters.set(url, responseStatusCounter);
+        // Create a single response status counter with URL as a label
+        this.responseStatusCounter = new Counter({
+            name: 'traffic_generator_responses',
+            help: 'Response status codes for target URLs',
+            labelNames: ['target_url', 'url_key', 'status', 'success'] as const,
+            registers: [this.registry]
         });
     }
 
@@ -43,21 +36,19 @@ export class MetricsService {
     }
 
     public incrementRequestCounter(url: string): void {
-        const counter = this.requestCounters.get(url);
-        if (counter) {
-            counter.inc({ target_url: url });
-        }
+        this.requestCounter.inc({
+            target_url: url,
+            url_key: this.normalizeUrlForMetrics(url)
+        });
     }
 
     public incrementResponseStatusCounter(url: string, status: number, success: boolean): void {
-        const counter = this.responseStatusCounters.get(url);
-        if (counter) {
-            counter.inc({ 
-                target_url: url, 
-                status: status.toString(), 
-                success: success.toString() 
-            });
-        }
+        this.responseStatusCounter.inc({
+            target_url: url,
+            url_key: this.normalizeUrlForMetrics(url),
+            status: status.toString(),
+            success: success.toString()
+        });
     }
 
     public getMetrics(): Promise<string> {
