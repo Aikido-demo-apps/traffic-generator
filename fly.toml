@@ -6,7 +6,9 @@
 app = 'traffic-generator'
 primary_region = 'ams'
 
-[build]
+[metrics]
+  port = 9090
+  path = "/metrics"
 
 [processes]
   worker = 'npm run start'
@@ -16,7 +18,3 @@ primary_region = 'ams'
   memory = '512mb'
   cpu_kind = 'shared'
   cpus = 2
-
-[metrics]
-  port = 9090
-  path = "/metrics"
