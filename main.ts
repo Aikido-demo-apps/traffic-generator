@@ -25,6 +25,7 @@ class TrafficGenerator {
 
     private readonly TARGET_URLS = [
         'https://zen-demo-nodejs.fly.dev/',
+        'https://zen-demo-nodejs-esm.fly.dev/',
         'https://zen-demo-dotnet.fly.dev/',
         'https://zen-demo-python.fly.dev/',
         'https://zen-demo-java.fly.dev/',
