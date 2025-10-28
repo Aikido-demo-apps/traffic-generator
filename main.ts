@@ -31,12 +31,14 @@ class TrafficGenerator {
         'https://zen-demo-java.fly.dev/',
         'https://zen-demo-php.fly.dev/',
         'https://zen-demo-ruby.fly.dev/',
+        'https://zen-demo-go.fly.dev/',
         'http://zen-demo-nodejs-danger.internal:3000/',
         'http://zen-demo-dotnet-danger.internal:8080/',
         'http://zen-demo-python-danger.internal:8080/',
         'http://zen-demo-java-danger.internal:8080/',
         'http://zen-demo-php-danger.internal:8080/',
         'http://zen-demo-ruby-danger.internal:8080/',
+        'http://zen-demo-go-danger.internal:3000/',
     ];
 
     private readonly IP_RANGES = {
