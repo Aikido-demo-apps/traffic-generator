@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { MetricsService } from './metrics';
 import { MetricsServer } from './server';
+import { specialRequests as configuredSpecialRequests, SpecialRequest, SpecialRequestContext } from './special-requests';
 
 interface UserAgent {
     pattern: string;
@@ -22,6 +23,9 @@ class TrafficGenerator {
     private readonly MIN_MULTIPLIER = 0.2; // Minimum traffic will be 20% of the base
     private requestInterval: NodeJS.Timeout | null = null;
     private metricsService: MetricsService;
+    private readonly specialRequests: SpecialRequest[];
+    private readonly specialRequestBaseContext: Pick<SpecialRequestContext, 'targetUrls' | 'metrics'>;
+    private specialRequestTimer: NodeJS.Timeout | null = null;
 
     private readonly TARGET_URLS = [
         'https://zen-demo-nodejs.fly.dev/',
@@ -215,12 +219,19 @@ class TrafficGenerator {
         // Initialize metrics service with target URLs
         this.metricsService = new MetricsService(this.TARGET_URLS);
 
+        this.specialRequestBaseContext = {
+            targetUrls: this.TARGET_URLS,
+            metrics: this.metricsService
+        };
+        this.specialRequests = [...configuredSpecialRequests];
+
         // Start metrics server
         const metricsServer = new MetricsServer(this.metricsService);
         metricsServer.start();
 
         this.initializeIPPool();
         this.startTrafficGeneration();
+        this.startSpecialRequestScheduler();
     }
 
     private initializeIPPool(): void {
@@ -409,6 +420,70 @@ class TrafficGenerator {
         this.requestInterval = setInterval(() => {
             this.makeRequest();
         }, initialInterval);
+    }
+
+    private startSpecialRequestScheduler(): void {
+        if (this.specialRequests.length === 0) {
+            console.log('No special requests configured; skipping extended scheduler.');
+            return;
+        }
+
+        const scheduleNext = () => {
+            const delay = this.getRandomSpecialRequestInterval();
+            const minutes = (delay / 60000).toFixed(1);
+            console.log(`[special-request] Next execution in approximately ${minutes} minutes.`);
+
+            this.specialRequestTimer = setTimeout(async () => {
+                try {
+                    await this.runRandomSpecialRequest();
+                } catch (error: unknown) {
+                    console.error('[special-request] Execution encountered errors:', error instanceof Error ? error.message : error);
+                } finally {
+                    scheduleNext();
+                }
+            }, delay);
+        };
+
+        scheduleNext();
+    }
+
+    private getRandomSpecialRequestInterval(): number {
+        const min = 15 * 60 * 1000;
+        const max = 30 * 60 * 1000;
+        return Math.floor(min + Math.random() * (max - min));
+    }
+
+    private async runRandomSpecialRequest(): Promise<void> {
+        if (this.specialRequests.length === 0) {
+            return;
+        }
+
+        const request = this.specialRequests[Math.floor(Math.random() * this.specialRequests.length)];
+        const ip = this.getRandomIP();
+        const headers = this.generateHeaders(ip);
+        console.log(`[special-request] Executing "${request.name}" for ${this.TARGET_URLS.length} target(s).`);
+
+        const failures: string[] = [];
+
+        await Promise.all(this.TARGET_URLS.map(async (targetUrl) => {
+            try {
+                await request.execute({
+                    ...this.specialRequestBaseContext,
+                    targetUrl,
+                    headers,
+                });
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : String(error);
+                failures.push(`${targetUrl}: ${message}`);
+            }
+        }));
+
+        if (failures.length > 0) {
+            console.error(`[special-request] "${request.name}" completed with ${failures.length} failure(s).`);
+            throw new Error(failures.join('; '));
+        }
+
+        console.log(`[special-request] "${request.name}" completed successfully for all targets.`);
     }
 
     public getStats(): any {
