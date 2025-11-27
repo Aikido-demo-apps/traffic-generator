@@ -319,9 +319,17 @@ class TrafficGenerator {
                     // Increment request counter before making the request
                     this.metricsService.incrementRequestCounter(url);
 
+                    // Track request duration
+                    const startTime = Date.now();
+
+                    // Send out request
                     const response = await axios.get(url, {
                         headers,
                     });
+
+                    // Track request duration
+                    const durationMs = Date.now() - startTime;
+                    this.metricsService.observeRequestDuration(url, durationMs);
 
                     // Increment response status counter after successful request
                     this.metricsService.incrementResponseStatusCounter(url, response.status, true);

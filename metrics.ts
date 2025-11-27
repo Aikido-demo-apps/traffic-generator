@@ -1,9 +1,10 @@
-import { Counter, Registry } from 'prom-client';
+import { Counter, Histogram, Registry, Summary } from 'prom-client';
 
 export class MetricsService {
     private readonly registry: Registry;
     private readonly requestCounter: Counter<string>;
     private readonly responseStatusCounter: Counter<string>;
+    private readonly requestDurationSummary: Summary<string>;
     private readonly targetUrls: string[];
 
     constructor(targetUrls: string[]) {
@@ -23,6 +24,16 @@ export class MetricsService {
             name: 'traffic_generator_responses',
             help: 'Response status codes for target URLs',
             labelNames: ['target_url', 'url_key', 'status', 'success'] as const,
+            registers: [this.registry]
+        });
+
+        this.requestDurationSummary = new Summary({
+            name: 'traffic_generator_request_duration_quantiles_milliseconds',
+            help: 'Request duration quantiles per target URL in milliseconds',
+            labelNames: ['target_url', 'url_key'] as const,
+            percentiles: [0.5, 0.9, 0.95, 0.99],
+            maxAgeSeconds: 300,
+            ageBuckets: 5,
             registers: [this.registry]
         });
     }
@@ -49,6 +60,13 @@ export class MetricsService {
             status: status.toString(),
             success: success.toString()
         });
+    }
+
+    public observeRequestDuration(url: string, durationMs: number): void {
+        this.requestDurationSummary.observe({
+            target_url: url,
+            url_key: this.normalizeUrlForMetrics(url)
+        }, durationMs);
     }
 
     public getMetrics(): Promise<string> {
