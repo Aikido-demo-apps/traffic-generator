@@ -28,14 +28,14 @@ class TrafficGenerator {
     private specialRequestTimer: NodeJS.Timeout | null = null;
 
     private readonly TARGET_URLS = [
-        'https://zen-demo-nodejs.fly.dev/',
-        'https://zen-demo-nodejs-esm.fly.dev/',
-        'https://zen-demo-dotnet.fly.dev/',
-        'https://zen-demo-python.fly.dev/',
-        'https://zen-demo-java.fly.dev/',
-        'https://zen-demo-php.fly.dev/',
-        'https://zen-demo-ruby.fly.dev/',
-        'https://zen-demo-go.fly.dev/',
+        'https://zen-demo-nodejs.internal:3000',
+        'https://zen-demo-nodejs-esm.internal:3000/',
+        'https://zen-demo-dotnet.internal:8080/',
+        'https://zen-demo-python.internal:8080/',
+        'https://zen-demo-java.internal:8080/',
+        'https://zen-demo-php.internal:8080/',
+        'https://zen-demo-ruby.internal:3000/',
+        'https://zen-demo-go.fly.internal:3000/',
         'http://zen-demo-nodejs-danger.internal:3000/',
         'http://zen-demo-dotnet-danger.internal:8080/',
         'http://zen-demo-python-danger.internal:8080/',
