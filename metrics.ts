@@ -1,6 +1,30 @@
 import { Counter, Histogram, Registry, Summary } from 'prom-client';
 
-export class MetricsService {
+function normalizeUrlForMetrics(url: string): string {
+    // Favor a short, stable service key: strip protocol, port, domains, and the zen-demo prefix
+    try {
+        const parsed = new URL(url);
+        const hostname = parsed.hostname.split('.')[0];
+        return hostname
+            .replace(/^zen-demo-/, '')
+            .replace(/[^a-zA-Z0-9]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .toLowerCase();
+    } catch {
+        return url
+            .replace(/^https?:\/\//, '')
+            .split('/')[0]
+            .split(':')[0]
+            .replace(/^zen-demo-/, '')
+            .replace(/[^a-zA-Z0-9]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .toLowerCase();
+    }
+}
+
+class MetricsService {
     private readonly registry: Registry;
     private readonly requestCounter: Counter<string>;
     private readonly responseStatusCounter: Counter<string>;
@@ -38,25 +62,17 @@ export class MetricsService {
         });
     }
 
-    private normalizeUrlForMetrics(url: string): string {
-        // Remove protocol, replace non-alphanumeric chars with underscore
-        return url
-            .replace(/^https?:\/\//, '')
-            .replace(/[^a-zA-Z0-9]/g, '_')
-            .toLowerCase();
-    }
-
     public incrementRequestCounter(url: string): void {
         this.requestCounter.inc({
             target_url: url,
-            url_key: this.normalizeUrlForMetrics(url)
+            url_key: normalizeUrlForMetrics(url)
         });
     }
 
     public incrementResponseStatusCounter(url: string, status: number, success: boolean): void {
         this.responseStatusCounter.inc({
             target_url: url,
-            url_key: this.normalizeUrlForMetrics(url),
+            url_key: normalizeUrlForMetrics(url),
             status: status.toString(),
             success: success.toString()
         });
@@ -65,7 +81,7 @@ export class MetricsService {
     public observeRequestDuration(url: string, durationMs: number): void {
         this.requestDurationSummary.observe({
             target_url: url,
-            url_key: this.normalizeUrlForMetrics(url)
+            url_key: normalizeUrlForMetrics(url)
         }, durationMs);
     }
 
@@ -77,3 +93,5 @@ export class MetricsService {
         return this.registry.contentType;
     }
 }
+
+export { MetricsService, normalizeUrlForMetrics };
