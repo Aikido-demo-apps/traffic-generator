@@ -345,17 +345,15 @@ class TrafficGenerator {
                     };
                 } catch (error) {
                     // Increment response status counter after failed request
-                    // @ts-ignore
-                    const status = error.response?.status || 0;
-                    this.metricsService.incrementResponseStatusCounter(url, status, false);
+                    const status = (error as any).response?.status || 0;
+                    const isExpectedForbidden = status === 403;
+                    this.metricsService.incrementResponseStatusCounter(url, status, isExpectedForbidden);
 
                     return {
                         url,
-                        // @ts-ignore
-                        status: status,
-                        success: false,
-                        // @ts-ignore
-                        error: error.message
+                        status,
+                        success: isExpectedForbidden,
+                        error: isExpectedForbidden ? undefined : (error as Error).message
                     };
                 }
             });
@@ -438,6 +436,7 @@ class TrafficGenerator {
 
         return axios.get(url, {
             headers,
+            validateStatus: (status) => status < 400 || status === 403,
             ...agentConfig
         });
     }
