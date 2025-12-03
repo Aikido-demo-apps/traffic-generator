@@ -321,52 +321,33 @@ class TrafficGenerator {
 
             // Make parallel requests to all target URLs
             const requests = this.TARGET_URLS.map(async (url) => {
+                const startTime = Date.now();
                 try {
                     // Increment request counter before making the request
                     this.metricsService.incrementRequestCounter(url);
 
-                    // Track request duration
-                    const startTime = Date.now();
-
                     // Send out request with optional DNS refresh on ENOTFOUND/ECONNREFUSED
                     const response = await this.fetchWithDnsFallback(url, headers);
 
-                    // Track request duration
-                    const durationMs = Date.now() - startTime;
-                    this.metricsService.observeRequestDuration(url, durationMs);
-
-                    // Increment response status counter after successful request
-                    this.metricsService.incrementResponseStatusCounter(url, response.status, true);
-
-                    return {
-                        url,
-                        status: response.status,
-                        success: true
-                    };
+                    // Record status
+                    this.metricsService.incrementResponseStatusCounter(url,  response.status);
                 } catch (error) {
-                    // Increment response status counter after failed request
                     const status = (error as any).response?.status || 0;
                     const isExpectedForbidden = status === 403;
-                    this.metricsService.incrementResponseStatusCounter(url, status, isExpectedForbidden);
 
-                    return {
-                        url,
-                        status,
-                        success: isExpectedForbidden,
-                        error: isExpectedForbidden ? undefined : (error as Error).message
-                    };
+                    if (!isExpectedForbidden) {
+                        console.error(`Failed request to ${url} ${error}`);
+                    }
+
+                    this.metricsService.incrementResponseStatusCounter(url, status);
                 }
+
+                const durationMs = Date.now() - startTime;
+                this.metricsService.observeRequestDuration(url, durationMs);
             });
 
             // Wait for all requests to complete
             const results = await Promise.all(requests);
-
-            // Log results for each URL
-            results.forEach(result => {
-                if (!result.success) {
-                    console.error(`Failed request to ${result.url}: ${result.error}`);
-                }
-            });
 
         } catch (error) {
             // @ts-ignore
@@ -436,7 +417,7 @@ class TrafficGenerator {
 
         return axios.get(url, {
             headers,
-            validateStatus: (status) => status < 400 || status === 403,
+            validateStatus: () => true,
             ...agentConfig
         });
     }

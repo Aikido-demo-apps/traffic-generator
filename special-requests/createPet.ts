@@ -18,11 +18,11 @@ export const createPetInjectionRequest: SpecialRequest = {
                 headers,
             });
 
-            metrics.incrementResponseStatusCounter(requestUrl, response.status, true);
+            metrics.incrementResponseStatusCounter(requestUrl, response.status);
             console.log(`[special-request] Successfully sent injection payload to ${requestUrl}`);
         } catch (error: unknown) {
             const status = axios.isAxiosError(error) && error.response ? error.response.status : 0;
-            metrics.incrementResponseStatusCounter(requestUrl, status, false);
+            metrics.incrementResponseStatusCounter(requestUrl, status);
             const message = error instanceof Error ? error.message : String(error);
             console.error(`[special-request] Injection request failed for ${requestUrl}:`, message);
         }

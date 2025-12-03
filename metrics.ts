@@ -47,7 +47,7 @@ class MetricsService {
         this.responseStatusCounter = new Counter({
             name: 'traffic_generator_responses',
             help: 'Response status codes for target URLs',
-            labelNames: ['target_url', 'url_key', 'status', 'success'] as const,
+            labelNames: ['target_url', 'url_key', 'status'] as const,
             registers: [this.registry]
         });
 
@@ -69,12 +69,11 @@ class MetricsService {
         });
     }
 
-    public incrementResponseStatusCounter(url: string, status: number, success: boolean): void {
+    public incrementResponseStatusCounter(url: string, status: number): void {
         this.responseStatusCounter.inc({
             target_url: url,
             url_key: normalizeUrlForMetrics(url),
             status: status.toString(),
-            success: success.toString()
         });
     }
 

@@ -19,11 +19,11 @@ export const readFileRequest: SpecialRequest = {
                 headers,
             });
 
-            metrics.incrementResponseStatusCounter(requestUrl.toString(), response.status, true);
+            metrics.incrementResponseStatusCounter(requestUrl.toString(), response.status);
             console.log(`[special-request] Successfully read secrets file from ${requestUrl.toString()}`);
         } catch (error: unknown) {
             const status = axios.isAxiosError(error) && error.response ? error.response.status : 0;
-            metrics.incrementResponseStatusCounter(requestUrl.toString(), status, false);
+            metrics.incrementResponseStatusCounter(requestUrl.toString(), status);
             const message = error instanceof Error ? error.message : String(error);
             console.error(`[special-request] Read file request failed for ${requestUrl.toString()}:`, message);
         }

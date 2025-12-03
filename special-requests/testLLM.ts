@@ -28,11 +28,11 @@ export const testLlmRequest: SpecialRequest = {
                 headers,
             });
 
-            metrics.incrementResponseStatusCounter(requestUrl, response.status, true);
+            metrics.incrementResponseStatusCounter(requestUrl, response.status);
             console.log(`[special-request] LLM test succeeded for ${requestUrl} using provider "${provider}".`);
         } catch (error: unknown) {
             const status = axios.isAxiosError(error) && error.response ? error.response.status : 0;
-            metrics.incrementResponseStatusCounter(requestUrl, status, false);
+            metrics.incrementResponseStatusCounter(requestUrl, status);
             const message = error instanceof Error ? error.message : String(error);
             console.error(`[special-request] LLM test failed for ${requestUrl} using provider "${provider}":`, message);
         }
