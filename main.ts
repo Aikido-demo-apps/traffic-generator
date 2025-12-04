@@ -26,12 +26,21 @@ class TrafficGenerator {
     private readonly MAX_MULTIPLIER = 3; // Peak traffic will be 3x the base
     private readonly MIN_MULTIPLIER = 0.2; // Minimum traffic will be 20% of the base
     private readonly DNS_REFRESH_COOLDOWN_MS = 60_000;
+    private readonly OUTBOUND_REQUEST_PROBABILITY = 0.1;
     private requestInterval: NodeJS.Timeout | null = null;
     private metricsService: MetricsService;
     private readonly specialRequests: SpecialRequest[];
     private readonly specialRequestBaseContext: Pick<SpecialRequestContext, 'targetUrls' | 'metrics'>;
     private specialRequestTimer: NodeJS.Timeout | null = null;
     private readonly dnsRefreshCooldowns = new Map<string, number>();
+
+    // Outbound endpoints that accept POST /api/request with a { url } payload
+    private readonly OUTBOUND_URLS: string[] = [
+        "https://api.aikido.dev",
+        "https://evil.aikido.dev",
+        "https://aikido.help",
+        "https://portal.attack-me.com"
+    ];
 
     private readonly TARGET_URLS = [
         'http://zen-demo-nodejs.internal:3000',
@@ -272,6 +281,15 @@ class TrafficGenerator {
         return entry.ip;
     }
 
+    private getRandomOutboundUrl(): string | null {
+        if (this.OUTBOUND_URLS.length === 0) {
+            return null;
+        }
+
+        const index = Math.floor(Math.random() * this.OUTBOUND_URLS.length);
+        return this.OUTBOUND_URLS[index];
+    }
+
     private generateHeaders(ip: string): Record<string, string> {
         const headers: Record<string, string> = {
             'X-Forwarded-For': ip,
@@ -314,13 +332,33 @@ class TrafficGenerator {
         return headers;
     }
 
+    private shouldSendOutboundRequest(): boolean {
+        return this.OUTBOUND_URLS.length > 0 && Math.random() < this.OUTBOUND_REQUEST_PROBABILITY;
+    }
+
+    private async dispatchOutboundRequests(outboundBase: string): Promise<void> {
+        const endpoint = new URL('/api/request', outboundBase).toString();
+
+        await Promise.all(this.TARGET_URLS.map(async (targetUrl) => {
+            try {
+                await axios.post(endpoint, { url: targetUrl }, {
+                    headers: { 'Content-Type': 'application/json' },
+                    validateStatus: () => true
+                });
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                console.error(`Failed outbound request to ${endpoint} for target ${targetUrl}:`, message);
+            }
+        }));
+    }
+
     private async makeRequest(): Promise<void> {
         try {
             const ip = this.getRandomIP();
             const headers = this.generateHeaders(ip);
 
             // Make parallel requests to all target URLs
-            const requests = this.TARGET_URLS.map(async (url) => {
+            const requests: Promise<void>[] = this.TARGET_URLS.map(async (url) => {
                 const startTime = Date.now();
                 try {
                     // Increment request counter before making the request
@@ -346,8 +384,15 @@ class TrafficGenerator {
                 this.metricsService.observeRequestDuration(url, durationMs);
             });
 
+            if (this.shouldSendOutboundRequest()) {
+                const outboundUrl = this.getRandomOutboundUrl();
+                if (outboundUrl) {
+                    requests.push(this.dispatchOutboundRequests(outboundUrl));
+                }
+            }
+
             // Wait for all requests to complete
-            const results = await Promise.all(requests);
+            await Promise.all(requests);
 
         } catch (error) {
             // @ts-ignore
