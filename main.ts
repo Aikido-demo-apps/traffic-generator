@@ -336,18 +336,16 @@ class TrafficGenerator {
         return this.OUTBOUND_URLS.length > 0 && Math.random() < this.OUTBOUND_REQUEST_PROBABILITY;
     }
 
-    private async dispatchOutboundRequests(outboundBase: string): Promise<void> {
-        const endpoint = new URL('/api/request', outboundBase).toString();
-
+    private async dispatchOutboundRequests(outboundUrl: string): Promise<void> {
         await Promise.all(this.TARGET_URLS.map(async (targetUrl) => {
             try {
-                await axios.post(endpoint, { url: targetUrl }, {
+                await axios.post(targetUrl + '/api/request', { url: outboundUrl }, {
                     headers: { 'Content-Type': 'application/json' },
                     validateStatus: () => true
                 });
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
-                console.error(`Failed outbound request to ${endpoint} for target ${targetUrl}:`, message);
+                console.error(`Failed outbound request to ${outboundUrl} for target ${targetUrl}:`, message);
             }
         }));
     }
