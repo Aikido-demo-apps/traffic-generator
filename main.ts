@@ -357,17 +357,24 @@ class TrafficGenerator {
 
             // Make parallel requests to all target URLs
             const requests: Promise<void>[] = this.TARGET_URLS.map(async (url) => {
+                // Increment request counter before making the request
+                this.metricsService.incrementRequestCounter(url);
+
                 const startTime = Date.now();
                 try {
-                    // Increment request counter before making the request
-                    this.metricsService.incrementRequestCounter(url);
-
                     // Send out request with optional DNS refresh on ENOTFOUND/ECONNREFUSED
                     const response = await this.fetchWithDnsFallback(url, headers);
+
+                    // Record duration
+                    const durationMs = Date.now() - startTime;
+                    this.metricsService.observeRequestDuration(url, durationMs);
 
                     // Record status
                     this.metricsService.incrementResponseStatusCounter(url,  response.status);
                 } catch (error) {
+                    const durationMs = Date.now() - startTime;
+                    this.metricsService.observeRequestDuration(url, durationMs);
+
                     const status = (error as any).response?.status || 0;
                     const isExpectedForbidden = status === 403;
 
@@ -377,9 +384,6 @@ class TrafficGenerator {
 
                     this.metricsService.incrementResponseStatusCounter(url, status);
                 }
-
-                const durationMs = Date.now() - startTime;
-                this.metricsService.observeRequestDuration(url, durationMs);
             });
 
             if (this.shouldSendOutboundRequest()) {
