@@ -36,8 +36,8 @@ class TrafficGenerator {
 
     // Outbound endpoints that accept POST /api/request with a { url } payload
     private readonly OUTBOUND_URLS: string[] = [
+        "https://www.aikido.dev",
         "https://api.aikido.dev",
-        "https://evil.aikido.dev",
         "https://aikido.help",
         "https://portal.attack-me.com"
     ];
