@@ -340,7 +340,7 @@ class TrafficGenerator {
         await Promise.all(this.TARGET_URLS.map(async (targetUrl) => {
             try {
                 await axios.post(targetUrl + '/api/request', { url: outboundUrl }, {
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json' }
                 });
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
