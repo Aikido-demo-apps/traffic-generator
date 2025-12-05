@@ -43,7 +43,7 @@ class TrafficGenerator {
     ];
 
     private readonly TARGET_URLS = [
-        'http://zen-demo-nodejs.internal:3000',
+        'http://zen-demo-nodejs.internal:3000/',
         'http://zen-demo-nodejs-esm.internal:3000/',
         'http://zen-demo-dotnet.internal:8080/',
         'http://zen-demo-python.internal:8080/',
@@ -339,7 +339,7 @@ class TrafficGenerator {
     private async dispatchOutboundRequests(outboundUrl: string): Promise<void> {
         await Promise.all(this.TARGET_URLS.map(async (targetUrl) => {
             try {
-                await axios.post(targetUrl + '/api/request', { url: outboundUrl }, {
+                await axios.post(targetUrl + 'api/request', { url: outboundUrl }, {
                     headers: { 'Content-Type': 'application/json' }
                 });
             } catch (error) {
