@@ -332,13 +332,14 @@ class TrafficGenerator {
 
     private async dispatchOutboundRequests(outboundUrl: string): Promise<void> {
         await Promise.all(this.TARGET_URLS.map(async (targetUrl) => {
+            const url = targetUrl + 'api/request';
             try {
-                await axios.post(targetUrl + 'api/request', { url: outboundUrl }, {
+                await axios.post(url, { url: outboundUrl }, {
                     headers: { 'Content-Type': 'application/json' }
                 });
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
-                console.error(`Failed outbound request to ${outboundUrl} for target ${targetUrl}:`, message);
+                console.error(`Failed outbound request to ${outboundUrl} for target ${url}:`, message);
             }
         }));
     }
