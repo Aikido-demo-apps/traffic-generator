@@ -341,7 +341,6 @@ class TrafficGenerator {
             try {
                 await axios.post(targetUrl + '/api/request', { url: outboundUrl }, {
                     headers: { 'Content-Type': 'application/json' },
-                    validateStatus: () => true
                 });
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
