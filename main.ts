@@ -1,7 +1,3 @@
-import dns from 'dns';
-import { Agent as HttpAgent } from 'http';
-import { Agent as HttpsAgent } from 'https';
-import { LookupFunction } from 'net';
 import axios from 'axios';
 import { MetricsService } from './metrics';
 import { MetricsServer } from './server';
@@ -25,14 +21,12 @@ class TrafficGenerator {
     private readonly BASE_REQUESTS_PER_MINUTE = 100;
     private readonly MAX_MULTIPLIER = 3; // Peak traffic will be 3x the base
     private readonly MIN_MULTIPLIER = 0.2; // Minimum traffic will be 20% of the base
-    private readonly DNS_REFRESH_COOLDOWN_MS = 60_000;
     private readonly OUTBOUND_REQUEST_PROBABILITY = 0.1;
     private requestInterval: NodeJS.Timeout | null = null;
     private metricsService: MetricsService;
     private readonly specialRequests: SpecialRequest[];
     private readonly specialRequestBaseContext: Pick<SpecialRequestContext, 'targetUrls' | 'metrics'>;
     private specialRequestTimer: NodeJS.Timeout | null = null;
-    private readonly dnsRefreshCooldowns = new Map<string, number>();
 
     // Outbound endpoints that accept POST /api/request with a { url } payload
     private readonly OUTBOUND_URLS: string[] = [
@@ -361,8 +355,9 @@ class TrafficGenerator {
 
                 const startTime = Date.now();
                 try {
-                    // Send out request with optional DNS refresh on ENOTFOUND/ECONNREFUSED
-                    const response = await this.fetchWithDnsFallback(url, headers);
+                    const response = await axios.get(url, {
+                        headers,
+                    });
 
                     // Record duration
                     const durationMs = Date.now() - startTime;
@@ -398,89 +393,6 @@ class TrafficGenerator {
         } catch (error) {
             // @ts-ignore
             console.error('Request orchestration failed:', error.message);
-        }
-    }
-
-    private isDnsOrConnectionRefused(error: unknown): boolean {
-        const code = (error as NodeJS.ErrnoException)?.code;
-        return code === 'ENOTFOUND' || code === 'ECONNREFUSED';
-    }
-
-    private shouldForceFreshLookup(hostname: string): boolean {
-        const nextAllowed = this.dnsRefreshCooldowns.get(hostname) || 0;
-        return Date.now() >= nextAllowed;
-    }
-
-    private markDnsRefreshCooldown(hostname: string): void {
-        this.dnsRefreshCooldowns.set(hostname, Date.now() + this.DNS_REFRESH_COOLDOWN_MS);
-    }
-
-    private buildFreshLookupAgent(protocol: string): { httpAgent?: HttpAgent; httpsAgent?: HttpsAgent } {
-        const lookup: LookupFunction = (hostname, options, callback) => {
-            const cb = (typeof options === 'function' ? options : callback) as ((err: NodeJS.ErrnoException | null, address?: string, family?: number) => void);
-            if (!cb) {
-                return;
-            }
-
-            const resolveFresh = async () => {
-                try {
-                    const v4 = await dns.promises.resolve4(hostname);
-                    if (v4.length > 0) {
-                        cb(null, v4[0], 4);
-                        return;
-                    }
-                } catch {
-                    // Try IPv6 below
-                }
-
-                try {
-                    const v6 = await dns.promises.resolve6(hostname);
-                    if (v6.length > 0) {
-                        cb(null, v6[0], 6);
-                        return;
-                    }
-                } catch (err) {
-                    cb(err as NodeJS.ErrnoException);
-                    return;
-                }
-
-                cb(new Error(`DNS resolve returned no results for ${hostname}`) as NodeJS.ErrnoException);
-            };
-
-            resolveFresh();
-        };
-
-        if (protocol === 'https:') {
-            return { httpsAgent: new HttpsAgent({ lookup }) };
-        }
-
-        return { httpAgent: new HttpAgent({ lookup }) };
-    }
-
-    private async performAxiosRequest(url: string, headers: Record<string, string>, forceFreshLookup: boolean) {
-        const protocol = new URL(url).protocol;
-        const agentConfig = forceFreshLookup ? this.buildFreshLookupAgent(protocol) : {};
-
-        return axios.get(url, {
-            headers,
-            validateStatus: () => true,
-            ...agentConfig
-        });
-    }
-
-    private async fetchWithDnsFallback(url: string, headers: Record<string, string>) {
-        const hostname = new URL(url).hostname;
-        const shouldTryFreshLookup = this.shouldForceFreshLookup(hostname);
-
-        try {
-            return await this.performAxiosRequest(url, headers, false);
-        } catch (error) {
-            if (shouldTryFreshLookup && this.isDnsOrConnectionRefused(error)) {
-                this.markDnsRefreshCooldown(hostname);
-                return this.performAxiosRequest(url, headers, true);
-            }
-
-            throw error;
         }
     }
 
