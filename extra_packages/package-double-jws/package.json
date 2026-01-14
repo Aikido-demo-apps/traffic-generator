@@ -1,0 +1,10 @@
+{
+  "name": "jws-double",
+  "scripts": {
+    "dev": "turbo dev --ui=stream --log-order=stream --output-logs=full --parallel"
+  },
+  "dependencies": {
+    "jws":"4.0.0",
+    "jsonwebtoken": "9.0.2"
+  }
+}
