@@ -51,7 +51,6 @@ class TrafficGenerator {
         'http://zen-demo-php-danger.internal:8080/',
         'http://zen-demo-ruby-danger.internal:3000/',
         'http://zen-demo-go-danger.internal:3000/',
-        'https://zen-demo-php.on-forge.com/',
     ];
 
     private readonly IP_RANGES = {
