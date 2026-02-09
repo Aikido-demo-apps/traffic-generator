@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import axios from 'axios';
 import { MetricsService } from './metrics';
 import { MetricsServer } from './server';
@@ -15,9 +17,23 @@ interface IPEntry {
     lastUsed: Date | null;
 }
 
+interface SimulatedUser {
+    id: number;
+    name: string;
+    ipAddresses: string[];
+}
+
+interface TrafficPoolConfig {
+    ipPool: string[];
+    users: SimulatedUser[];
+}
+
 class TrafficGenerator {
-    private readonly IP_POOL_SIZE = 100;
+    private readonly TRAFFIC_POOL_CONFIG_PATH = 'config/simulated-users.json';
     private readonly ipPool: IPEntry[] = [];
+    private readonly MIN_IPS_PER_USER = 2;
+    private readonly MAX_IPS_PER_USER = 3;
+    private readonly userPool: SimulatedUser[] = [];
     private readonly BASE_REQUESTS_PER_MINUTE = 100;
     private readonly MAX_MULTIPLIER = 3; // Peak traffic will be 3x the base
     private readonly MIN_MULTIPLIER = 0.2; // Minimum traffic will be 20% of the base
@@ -237,40 +253,113 @@ class TrafficGenerator {
         const metricsServer = new MetricsServer(this.metricsService);
         metricsServer.start();
 
-        this.initializeIPPool();
+        this.loadTrafficPoolFromFile();
         this.startTrafficGeneration();
         this.startSpecialRequestScheduler();
     }
 
-    private initializeIPPool(): void {
-        const regions = Object.entries(this.IP_RANGES);
-        const ipsPerRegion = Math.ceil(this.IP_POOL_SIZE / regions.length);
+    private loadTrafficPoolFromFile(): void {
+        const configPath = path.resolve(process.cwd(), this.TRAFFIC_POOL_CONFIG_PATH);
+        const raw = fs.readFileSync(configPath, 'utf8');
+        const parsed = JSON.parse(raw) as TrafficPoolConfig;
 
-        regions.forEach(([regionCode, prefixes]) => {
-            for (let i = 0; i < ipsPerRegion && this.ipPool.length < this.IP_POOL_SIZE; i++) {
-                const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-                const ip = `${prefix}${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`;
+        this.validateTrafficPoolConfig(parsed);
 
-                if (!this.ipPool.some(entry => entry.ip === ip)) {
-                    this.ipPool.push({
-                        ip,
-                        region: regionCode,
-                        useCount: 0,
-                        lastUsed: null
-                    });
+        this.ipPool.push(...parsed.ipPool.map((ip) => ({
+            ip,
+            region: this.getRegionForIP(ip),
+            useCount: 0,
+            lastUsed: null
+        })));
+
+        this.userPool.push(...parsed.users);
+    }
+
+    private validateTrafficPoolConfig(config: TrafficPoolConfig): void {
+        if (!Array.isArray(config.ipPool) || config.ipPool.length === 0) {
+            throw new Error(`Invalid traffic pool config: "ipPool" must contain at least one IP (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
+        }
+
+        if (!Array.isArray(config.users) || config.users.length === 0) {
+            throw new Error(`Invalid traffic pool config: "users" must contain at least one user (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
+        }
+
+        const ipSet = new Set(config.ipPool);
+        if (ipSet.size !== config.ipPool.length) {
+            throw new Error(`Invalid traffic pool config: duplicate IPs found in "ipPool" (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
+        }
+
+        const userIdSet = new Set<number>();
+        for (const user of config.users) {
+            if (typeof user.id !== 'number' || !Number.isInteger(user.id)) {
+                throw new Error(`Invalid traffic pool config: user id must be an integer (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
+            }
+
+            if (userIdSet.has(user.id)) {
+                throw new Error(`Invalid traffic pool config: duplicate user id "${user.id}" (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
+            }
+            userIdSet.add(user.id);
+
+            if (typeof user.name !== 'string' || user.name.trim().length === 0) {
+                throw new Error(`Invalid traffic pool config: user "${user.id}" must have a non-empty name (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
+            }
+
+            if (!Array.isArray(user.ipAddresses) || user.ipAddresses.length < this.MIN_IPS_PER_USER || user.ipAddresses.length > this.MAX_IPS_PER_USER) {
+                throw new Error(`Invalid traffic pool config: user "${user.id}" must have ${this.MIN_IPS_PER_USER}-${this.MAX_IPS_PER_USER} IP addresses (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
+            }
+
+            const userIPSet = new Set(user.ipAddresses);
+            if (userIPSet.size !== user.ipAddresses.length) {
+                throw new Error(`Invalid traffic pool config: user "${user.id}" has duplicate IP addresses (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
+            }
+
+            for (const ip of user.ipAddresses) {
+                if (!ipSet.has(ip)) {
+                    throw new Error(`Invalid traffic pool config: user "${user.id}" references unknown IP "${ip}" (${this.TRAFFIC_POOL_CONFIG_PATH}).`);
                 }
             }
-        });
+        }
+    }
+
+    private getRegionForIP(ip: string): string {
+        const firstOctet = `${ip.split('.')[0]}.`;
+
+        for (const [regionCode, prefixes] of Object.entries(this.IP_RANGES)) {
+            if (prefixes.includes(firstOctet)) {
+                return regionCode;
+            }
+        }
+
+        return 'UN';
+    }
+
+    private getSimulatedUser(): SimulatedUser {
+        const index = Math.floor(Math.random() * this.userPool.length);
+        return this.userPool[index];
+    }
+
+    private markIPUsed(ip: string): void {
+        const entry = this.ipPool.find((ipEntry) => ipEntry.ip === ip);
+        if (!entry) {
+            return;
+        }
+
+        entry.useCount++;
+        entry.lastUsed = new Date();
     }
 
     private getRandomIP(): string {
         const index = Math.floor(Math.random() * this.ipPool.length);
         const entry = this.ipPool[index];
-
-        entry.useCount++;
-        entry.lastUsed = new Date();
-
+        this.markIPUsed(entry.ip);
         return entry.ip;
+    }
+
+    private getUserIP(user: SimulatedUser): string {
+        const index = Math.floor(Math.random() * user.ipAddresses.length);
+        const ip = user.ipAddresses[index];
+        this.markIPUsed(ip);
+        return ip;
     }
 
     private getRandomOutboundUrl(): string | null {
@@ -282,14 +371,16 @@ class TrafficGenerator {
         return this.OUTBOUND_URLS[index];
     }
 
-    private generateHeaders(ip: string): Record<string, string> {
+    private generateHeaders(): Record<string, string> {
         const headers: Record<string, string> = {
-            'X-Forwarded-For': ip,
-            'X-Real-IP': ip,
             'X-Forwarded-Proto': 'https',
         };
 
         if (Math.random() < 0.3) { // 30% chance for bot
+            const ip = this.getRandomIP();
+            headers['X-Forwarded-For'] = ip;
+            headers['X-Real-IP'] = ip;
+
             const category = Math.floor(Math.random() * 9) + 1;
             const userAgents = this.USER_AGENTS.filter(ua => ua.category === category);
             const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
@@ -306,19 +397,13 @@ class TrafficGenerator {
             const browser = browsers[Math.floor(Math.random() * browsers.length)];
             headers['User-Agent'] = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ${browser}`;
 
-            // Add user ID and matching name headers for non-bot requests
-            const userId = Math.floor(10000 + Math.random() * 90000); // Generate random 5-digit user ID
-            const names = [
-                'Alice', 'Bob', 'Charlie', 'David', 'Emma',
-                'Frank', 'Grace', 'Henry', 'Isabella', 'Jack',
-                'Kate', 'Liam', 'Mia', 'Noah', 'Olivia',
-                'Peter', 'Quinn', 'Ryan', 'Sophia', 'Thomas'
-            ];
-            const nameIndex = userId % names.length;
-            const userName = names[nameIndex];
+            const user = this.getSimulatedUser();
+            const ip = this.getUserIP(user);
+            headers['X-Forwarded-For'] = ip;
+            headers['X-Real-IP'] = ip;
 
-            headers['X-User-ID'] = '' + userId;
-            headers['X-User-Name'] = userName;
+            headers['X-User-ID'] = '' + user.id;
+            headers['X-User-Name'] = user.name;
         }
 
         return headers;
@@ -344,8 +429,7 @@ class TrafficGenerator {
 
     private async makeRequest(): Promise<void> {
         try {
-            const ip = this.getRandomIP();
-            const headers = this.generateHeaders(ip);
+            const headers = this.generateHeaders();
 
             // Make parallel requests to all target URLs
             const requests: Promise<void>[] = this.TARGET_URLS.map(async (url) => {
@@ -491,8 +575,7 @@ class TrafficGenerator {
         }
 
         const request = this.specialRequests[Math.floor(Math.random() * this.specialRequests.length)];
-        const ip = this.getRandomIP();
-        const headers = this.generateHeaders(ip);
+        const headers = this.generateHeaders();
         console.log(`[special-request] Executing "${request.name}" for ${this.TARGET_URLS.length} target(s).`);
 
         const failures: string[] = [];
@@ -521,6 +604,7 @@ class TrafficGenerator {
     public getStats(): any {
         return {
             totalIPs: this.ipPool.length,
+            totalUsers: this.userPool.length,
             targetUrls: this.TARGET_URLS,
             currentTrafficRate: this.getCurrentRequestsPerMinute(),
             timeOfDay: new Date().toLocaleTimeString(),
