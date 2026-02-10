@@ -58,6 +58,8 @@ class TrafficGenerator {
         'http://zen-demo-python.internal:8080/',
         'http://zen-demo-java.internal:8080/',
         'http://zen-demo-php.internal:8080/',
+        'http://zen-demo-frankenphp.internal:8080/',
+        'http://zen-demo-frankenphp-worker.internal:8080/',
         'http://zen-demo-ruby.internal:3000/',
         'http://zen-demo-go.internal:3000/',
         'http://zen-demo-nodejs-danger.internal:3000/',
@@ -65,6 +67,8 @@ class TrafficGenerator {
         'http://zen-demo-python-danger.internal:8080/',
         'http://zen-demo-java-danger.internal:8080/',
         'http://zen-demo-php-danger.internal:8080/',
+        'http://zen-demo-frankenphp-danger.internal:8080/',
+        'http://zen-demo-frankenphp-worker-danger.internal:8080/',
         'http://zen-demo-ruby-danger.internal:3000/',
         'http://zen-demo-go-danger.internal:3000/',
     ];
