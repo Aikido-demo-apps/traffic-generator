@@ -14,7 +14,7 @@ primary_region = 'ams'
   worker = 'npm run start'
 
 [[vm]]
-  size = 'shared-cpu-1x'
+  size = 'performance-1x'
   memory = '1024mb'
   cpu_kind = 'dedicated'
   cpus = 2
