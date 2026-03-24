@@ -34,6 +34,8 @@ class TrafficGenerator {
     private readonly MIN_IPS_PER_USER = 2;
     private readonly MAX_IPS_PER_USER = 3;
     private readonly userPool: SimulatedUser[] = [];
+    private readonly ipPoolMap: Map<string, IPEntry> = new Map();
+    private readonly userAgentsByCategory: Map<number, UserAgent[]> = new Map();
     private readonly BASE_REQUESTS_PER_MINUTE = 100;
     private readonly MAX_MULTIPLIER = 3; // Peak traffic will be 3x the base
     private readonly MIN_MULTIPLIER = 0.2; // Minimum traffic will be 20% of the base
@@ -243,6 +245,14 @@ class TrafficGenerator {
             throw new Error('At least one target URL must be provided');
         }
 
+        // Pre-group user agents by category for O(1) lookup
+        for (const ua of this.USER_AGENTS) {
+            if (!this.userAgentsByCategory.has(ua.category)) {
+                this.userAgentsByCategory.set(ua.category, []);
+            }
+            this.userAgentsByCategory.get(ua.category)!.push(ua);
+        }
+
         // Initialize metrics service with target URLs
         this.metricsService = new MetricsService(this.TARGET_URLS);
 
@@ -268,12 +278,11 @@ class TrafficGenerator {
 
         this.validateTrafficPoolConfig(parsed);
 
-        this.ipPool.push(...parsed.ipPool.map((ip) => ({
-            ip,
-            region: this.getRegionForIP(ip),
-            useCount: 0,
-            lastUsed: null
-        })));
+        for (const ip of parsed.ipPool) {
+            const entry: IPEntry = { ip, region: this.getRegionForIP(ip), useCount: 0, lastUsed: null };
+            this.ipPool.push(entry);
+            this.ipPoolMap.set(ip, entry);
+        }
 
         this.userPool.push(...parsed.users);
     }
@@ -342,7 +351,7 @@ class TrafficGenerator {
     }
 
     private markIPUsed(ip: string): void {
-        const entry = this.ipPool.find((ipEntry) => ipEntry.ip === ip);
+        const entry = this.ipPoolMap.get(ip);
         if (!entry) {
             return;
         }
@@ -385,7 +394,7 @@ class TrafficGenerator {
             headers['X-Real-IP'] = ip;
 
             const category = Math.floor(Math.random() * 9) + 1;
-            const userAgents = this.USER_AGENTS.filter(ua => ua.category === category);
+            const userAgents = this.userAgentsByCategory.get(category) ?? [];
             const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
 
             headers['User-Agent'] = `Mozilla/5.0 (compatible; ${userAgent.pattern}/${Math.floor(Math.random() * 10)}.0)`;

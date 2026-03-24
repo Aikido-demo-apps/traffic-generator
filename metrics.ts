@@ -1,18 +1,23 @@
 import { Counter, Histogram, Registry, Summary } from 'prom-client';
 
+const normalizeUrlCache = new Map<string, string>();
+
 function normalizeUrlForMetrics(url: string): string {
+    const cached = normalizeUrlCache.get(url);
+    if (cached !== undefined) return cached;
     // Favor a short, stable service key: strip protocol, port, domains, and the zen-demo prefix
+    let result: string;
     try {
         const parsed = new URL(url);
         const hostname = parsed.hostname.split('.')[0];
-        return hostname
+        result = hostname
             .replace(/^zen-demo-/, '')
             .replace(/[^a-zA-Z0-9]/g, '_')
             .replace(/_+/g, '_')
             .replace(/^_+|_+$/g, '')
             .toLowerCase();
     } catch {
-        return url
+        result = url
             .replace(/^https?:\/\//, '')
             .split('/')[0]
             .split(':')[0]
@@ -22,6 +27,8 @@ function normalizeUrlForMetrics(url: string): string {
             .replace(/^_+|_+$/g, '')
             .toLowerCase();
     }
+    normalizeUrlCache.set(url, result);
+    return result;
 }
 
 class MetricsService {
