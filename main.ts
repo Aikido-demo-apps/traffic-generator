@@ -72,6 +72,7 @@ class TrafficGenerator {
         'http://zen-demo-frankenphp-worker-danger.internal:8080/',
         'http://zen-demo-ruby-danger.internal:3000/',
         'http://zen-demo-go-danger.internal:3000/',
+        'https://zen-demo-dotnet-framework.azurewebsites.net/'
     ];
 
     private readonly IP_RANGES = {
