@@ -16,5 +16,5 @@ primary_region = 'ams'
 [[vm]]
   size = 'performance-1x'
   memory = '1024mb'
-  cpu_kind = 'dedicated'
+  cpu_kind = 'performance'
   cpus = 2
