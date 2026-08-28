@@ -53,26 +53,39 @@ class TrafficGenerator {
     ];
 
     private readonly TARGET_URLS = [
-        'http://zen-demo-nodejs.internal:3000/',
-        'http://zen-demo-nodejs-esm.internal:3000/',
-        'http://zen-demo-dotnet.internal:8080/',
-        'http://zen-demo-python.internal:8080/',
-        'http://zen-demo-java.internal:8080/',
-        'http://zen-demo-php.internal:8080/',
-        'http://zen-demo-frankenphp.internal:8080/',
-        'http://zen-demo-frankenphp-worker.internal:8080/',
-        'http://zen-demo-ruby.internal:3000/',
-        'http://zen-demo-go.internal:3000/',
-        'http://zen-nodejs-danger.internal:3000/',
-        'http://zen-dotnet-danger.internal:8080/',
-        'http://zen-python-danger.internal:8080/',
-        'http://zen-java-danger.internal:8080/',
-        'http://zen-php-danger.internal:8080/',
-        'http://zen-frankenphp-danger.internal:8080/',
-        'http://zen-frankenphp-worker-danger.internal:8080/',
-        'http://zen-ruby-danger.internal:3000/',
-        'http://zen-go-danger.internal:3000/',
-        'https://zen-demo-dotnet-framework.azurewebsites.net/'
+      'https://zen-demo-nodejs.fly.dev/',
+      'http://zen-nodejs.internal:3000/',
+      'http://zen-nodejs-esm.internal:3000/',
+      'http://zen-nodejs-danger.internal:3000/',
+
+      'https://zen-demo-dotnet.fly.dev/',
+      'http://zen-dotnet.internal:8080/',
+      'http://zen-dotnet-danger.internal:8080/',
+      'https://zen-demo-dotnet-framework.azurewebsites.net/',
+
+      'https://zen-demo-python.fly.dev',
+      'http://zen-python.internal:8080/',
+      'http://zen-python-danger.internal:8080/',
+
+      'https://zen-demo-java.fly.dev',
+      'http://zen-java.internal:8080/',
+      'http://zen-java-danger.internal:8080/',
+
+      'https://zen-demo-php.fly.dev',
+      'http://zen-php.internal:8080/',
+      'http://zen-php-danger.internal:8080/',
+      'http://zen-frankenphp.internal:8080/',
+      'http://zen-frankenphp-danger.internal:8080/',
+      'http://zen-frankenphp-worker.internal:8080/',
+      'http://zen-frankenphp-worker-danger.internal:8080/',
+
+      'https://zen-demo-ruby.fly.dev',
+      'http://zen-ruby.internal:3000/',
+      'http://zen-ruby-danger.internal:3000/',
+
+      'https://zen-demo-go.fly.dev/',
+      'http://zen-go.internal:3000/',
+      'http://zen-go-danger.internal:3000/',
     ];
 
     private readonly IP_RANGES = {
